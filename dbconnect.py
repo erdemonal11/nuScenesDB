@@ -1,22 +1,21 @@
 import psycopg2
 import os
+from dotenv import load_dotenv
 
-# Database connection parameters from environment variables
-host = os.getenv('DB_HOST', 'localhost')
-port = os.getenv('DB_PORT', '5432')
-database = os.getenv('DB_NAME', 'nuScene')
-user = os.getenv('DB_USER', 'erdem')
-password = os.getenv('DB_PASSWORD', 'erdem')
+load_dotenv()
 
-# Path to your SQL file
+host = os.getenv('DB_HOST')
+port = os.getenv('DB_PORT')
+database = os.getenv('DB_NAME')
+user = os.getenv('DB_USER')
+password = os.getenv('DB_PASSWORD')
+
 sql_file_path = '/app/nuScene.sql'
 
-# Initialize variables
 connection = None
 cursor = None
 
 try:
-    # Connect to the PostgreSQL server
     connection = psycopg2.connect(
         host=host,
         port=port,
@@ -25,17 +24,13 @@ try:
         password=password
     )
 
-    # Create a cursor object
     cursor = connection.cursor()
 
-    # Read the SQL file
     with open(sql_file_path, 'r') as file:
         sql_commands = file.read()
 
-    # Execute the SQL commands
     cursor.execute(sql_commands)
     
-    # Commit the changes
     connection.commit()
     print("SQL script executed successfully!")
 
