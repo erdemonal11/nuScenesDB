@@ -3,10 +3,52 @@
 CREATE TABLE log (
     log_token VARCHAR(255) PRIMARY KEY,
     vehicle VARCHAR(255),
-    date_captured DATETIME,
+    date_captured TIMESTAMP,
     location VARCHAR(255)
 );
 
+-- Create tables with no foreign key dependencies first
+CREATE TABLE ego_pose (
+    ego_pose_token VARCHAR(255) PRIMARY KEY,
+    translation VARCHAR(255),
+    rotation VARCHAR(255),
+    timestamp TIMESTAMP
+);
+
+CREATE TABLE calibrated_sensor (
+    sensor_token VARCHAR(255) PRIMARY KEY,
+    translation VARCHAR(255),
+    rotation VARCHAR(255),
+    camera_intrinsic TEXT
+);
+
+CREATE TABLE sensor (
+    sensor_token VARCHAR(255) PRIMARY KEY,
+    channel VARCHAR(255),
+    modality VARCHAR(255)
+);
+
+-- Taxonomy Schema
+CREATE TABLE category (
+    category_token VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT,
+    index INT
+);
+
+CREATE TABLE attribute (
+    attribute_token VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT
+);
+
+CREATE TABLE visibility (
+    visibility_token VARCHAR(255) PRIMARY KEY,
+    level VARCHAR(255),
+    description TEXT
+);
+
+-- Create tables with foreign key dependencies next
 CREATE TABLE map (
     log_token VARCHAR(255),
     category VARCHAR(255),
@@ -15,7 +57,6 @@ CREATE TABLE map (
 );
 
 -- Extraction Schema
-
 CREATE TABLE scene (
     scene_token VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255),
@@ -29,20 +70,13 @@ CREATE TABLE scene (
 
 CREATE TABLE sample (
     sample_token VARCHAR(255) PRIMARY KEY,
-    timestamp DATETIME,
+    timestamp TIMESTAMP,
     scene_token VARCHAR(255),
     next VARCHAR(255),
     prev VARCHAR(255),
     FOREIGN KEY (scene_token) REFERENCES scene(scene_token),
     FOREIGN KEY (next) REFERENCES sample(sample_token),
     FOREIGN KEY (prev) REFERENCES sample(sample_token)
-);
-
-CREATE TABLE calibrated_sensor (
-    sensor_token VARCHAR(255) PRIMARY KEY,
-    translation VARCHAR(255),
-    rotation VARCHAR(255),
-    camera_intrinsic TEXT
 );
 
 CREATE TABLE sample_data (
@@ -54,7 +88,7 @@ CREATE TABLE sample_data (
     fileformat VARCHAR(50),
     width INT,
     height INT,
-    timestamp DATETIME,
+    timestamp TIMESTAMP,
     is_key_frame BOOLEAN,
     next VARCHAR(255),
     prev VARCHAR(255),
@@ -65,21 +99,7 @@ CREATE TABLE sample_data (
     FOREIGN KEY (prev) REFERENCES sample_data(sample_data_token)
 );
 
-CREATE TABLE ego_pose (
-    ego_pose_token VARCHAR(255) PRIMARY KEY,
-    translation VARCHAR(255),
-    rotation VARCHAR(255),
-    timestamp DATETIME
-);
-
-CREATE TABLE sensor (
-    sensor_token VARCHAR(255) PRIMARY KEY,
-    channel VARCHAR(255),
-    modality VARCHAR(255)
-);
-
 -- Annotation Schema
-
 CREATE TABLE instance (
     instance_token VARCHAR(255) PRIMARY KEY,
     category_token VARCHAR(255),
@@ -114,25 +134,4 @@ CREATE TABLE lidarseg (
     filename VARCHAR(255),
     sample_data_token VARCHAR(255),
     FOREIGN KEY (sample_data_token) REFERENCES sample_data(sample_data_token)
-);
-
--- Taxonomy Schema
-
-CREATE TABLE category (
-    category_token VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255),
-    description TEXT,
-    index INT
-);
-
-CREATE TABLE attribute (
-    attribute_token VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255),
-    description TEXT
-);
-
-CREATE TABLE visibility (
-    visibility_token VARCHAR(255) PRIMARY KEY,
-    level VARCHAR(255),
-    description TEXT
 );
