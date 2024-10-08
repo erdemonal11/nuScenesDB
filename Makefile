@@ -14,7 +14,7 @@ build:
 
 .PHONY: run
 run: stop
-	docker run --network="host" -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) -e DB_NAME=$(DB_NAME) --name $(CONTAINER_NAME) $(IMAGE_NAME)
+	docker run --network="host" -e DB_USER=erdem -e DB_PASSWORD=erdem -e DB_HOST=host.docker.internal -e DB_PORT=5432 -e DB_NAME=nuScene --name nuscene-db nuscene
 
 .PHONY: stop
 stop:

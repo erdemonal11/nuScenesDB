@@ -10,7 +10,10 @@ database = os.getenv('DB_NAME')
 user = os.getenv('DB_USER')
 password = os.getenv('DB_PASSWORD')
 
-sql_file_path = '/app/nuScene.sql'
+if os.path.exists('/.dockerenv'):
+    sql_file_path = '/app/nuScene.sql'
+else:
+    sql_file_path = r'C:\Users\mrifk\Desktop\nuScenesDB\nuScene.sql'
 
 connection = None
 cursor = None
@@ -26,6 +29,7 @@ try:
 
     cursor = connection.cursor()
 
+    
     with open(sql_file_path, 'r') as file:
         sql_commands = file.read()
 
