@@ -1,5 +1,3 @@
--- Vehicle Schema
-
 CREATE TABLE log (
     log_token VARCHAR(255) PRIMARY KEY,
     vehicle VARCHAR(255),
@@ -7,7 +5,6 @@ CREATE TABLE log (
     location VARCHAR(255)
 );
 
--- Create tables with no foreign key dependencies first
 CREATE TABLE ego_pose (
     ego_pose_token VARCHAR(255) PRIMARY KEY,
     translation VARCHAR(255),
@@ -28,7 +25,6 @@ CREATE TABLE sensor (
     modality VARCHAR(255)
 );
 
--- Taxonomy Schema
 CREATE TABLE category (
     category_token VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255),
@@ -48,7 +44,6 @@ CREATE TABLE visibility (
     description TEXT
 );
 
--- Create tables with foreign key dependencies next
 CREATE TABLE map (
     log_token VARCHAR(255),
     category VARCHAR(255),
@@ -56,7 +51,6 @@ CREATE TABLE map (
     FOREIGN KEY (log_token) REFERENCES log(log_token)
 );
 
--- Extraction Schema
 CREATE TABLE scene (
     scene_token VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255),
@@ -99,7 +93,6 @@ CREATE TABLE sample_data (
     FOREIGN KEY (prev) REFERENCES sample_data(sample_data_token)
 );
 
--- Annotation Schema
 CREATE TABLE instance (
     instance_token VARCHAR(255) PRIMARY KEY,
     category_token VARCHAR(255),
