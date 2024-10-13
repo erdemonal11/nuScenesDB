@@ -13,7 +13,7 @@ password = os.getenv('DB_PASSWORD')
 if os.path.exists('/.dockerenv'):
     sql_file_path = '/app/nuScene.sql'
 else:
-    sql_file_path = r'C:\Users\mrifk\Desktop\nuScenesDB\nuScene.sql'
+    sql_file_path = r'C:\Users\mrifk\Desktop\nuScene\nuScenesDB\nuScene.sql'
 
 connection = None
 cursor = None
