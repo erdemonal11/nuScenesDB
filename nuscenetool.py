@@ -12,16 +12,17 @@ load_dotenv()
 ctk.set_appearance_mode("dark")  # Default to dark mode
 ctk.set_default_color_theme("green")
 
+
 class CRUDApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         # Set window properties
         self.title("nuScenes DB Tool")
-        self.geometry("1000x600")  # Increased the size to allow more space for columns
+        self.geometry("700x600")  # Increased the size to allow more space for columns
         self.configure(bg="#1e1e1e")
         self.resizable(False, False)  # Disable resizing
-        self.iconbitmap("MDU_logo.ico")  # Set the app icon to the correct MDU logo
+        self.iconbitmap("MDU_logo.ico")  # Ensure the path to the logo is correct
 
         # Variables
         self.connection = None
@@ -93,7 +94,7 @@ class CRUDApp(ctk.CTk):
         self.delete_button.grid(row=0, column=2, padx=10, pady=10)
 
         self.download_button = ctk.CTkButton(self.crud_frame, text="Download DB", command=self.download_database, width=100,
-                                             hover_color="#17a2b8", fg_color="#0275d8")
+                                             hover_color="#17a2b8", fg_color="#0275d8", state="disabled")
         self.download_button.grid(row=0, column=3, padx=10, pady=10)
 
         # Force the CRUD frame to the bottom of the app, removing unnecessary space
@@ -135,6 +136,9 @@ class CRUDApp(ctk.CTk):
             # Update table dropdown
             self.table_menu.configure(values=self.tables)
 
+            # Enable download button after successful connection
+            self.download_button.configure(state="normal")
+
             # Change button text to "Remove Connection"
             self.connection_button.configure(text="Remove Connection", fg_color="#dc3545", hover_color="#ff4d4d")
             messagebox.showinfo("Success", "Connected to the database successfully!")
@@ -149,12 +153,21 @@ class CRUDApp(ctk.CTk):
                 cursor.close()
 
     def disconnect_from_db(self):
-        """Disconnect from the database."""
+        """Disconnect from the database and reset table data."""
         try:
             if self.connection:
                 self.connection.close()
                 self.connection = None
                 self.connection_button.configure(text="Connect to DB", fg_color="#17a2b8", hover_color="#4CAF50")
+
+                # Disable download button when disconnected
+                self.download_button.configure(state="disabled")
+
+                # Clear the Treeview and reset table selection
+                self.tree.delete(*self.tree.get_children())  # Clear table data
+                self.table_var.set("Select a table")  # Reset the option menu to "Select a table"
+                self.table_menu.configure(values=[])  # Clear the table list in the option menu
+
                 messagebox.showinfo("Disconnected", "Database connection closed successfully.")
             else:
                 messagebox.showwarning("Warning", "No active connection to disconnect.")
@@ -229,6 +242,9 @@ class CRUDApp(ctk.CTk):
 
     def download_database(self):
         """Download the entire PostgreSQL database as a SQL file on the Desktop."""
+        if not self.check_connection():
+            return
+
         host = os.getenv('DB_HOST', '127.0.0.1')
         port = os.getenv('DB_PORT', '5432')
         database = os.getenv('DB_NAME')
@@ -262,6 +278,13 @@ class CRUDApp(ctk.CTk):
         """Create a new record in the selected table."""
         if not self.check_connection():
             return
+
+        table_name = self.table_var.get()
+
+        if table_name == "Select a table" or not table_name:
+            messagebox.showwarning("No Table Selected", "Please select a table before creating a record.")
+            return
+
         self.show_form_dialog(is_create=True)
 
     def update_record(self):
@@ -319,18 +342,41 @@ class CRUDApp(ctk.CTk):
                 cursor.close()
 
     def show_form_dialog(self, is_create=True, record_values=None):
-        """Show a unified form for creating/updating records."""
+        """Show a unified form for creating/updating records with dynamic sizing based on table name."""
         table_name = self.table_var.get()
-        if not table_name:
+        if not table_name or table_name == "Select a table":
             messagebox.showwarning("No Table Selected", "Please select a table first.")
             return
 
-        # Create a new top-level window for input form
+        # Define window sizes for each table
+        table_sizes = {
+            "sample_data": "450x760",
+            "instance": "420x430",
+            "scene": "420x520",
+            "map": "350x350",
+            "sensor": "390x350",
+            "log": "380x370",
+            "attribute": "390x350",
+            "visibility": "380x350",
+            "calibrated_sensor": "410x400",
+            "sample": "410x440",
+            "ego_pose": "410x370",
+            "category": "410x370",
+            "lidarseg": "420x350",
+            "sample_annotation": "450x760",
+        }
+
+        # Get the window size based on the table name, default to 400x400 if not found
+        window_size = table_sizes.get(table_name, "400x400")
+
+        # Create a new top-level window for the input form
         form_window = ctk.CTkToplevel(self)
-        form_window.title("Create Record" if is_create else "Update Record")
-        form_window.geometry("400x500")
+        form_window.title(table_name)  # Display the entity (table name) in the title
+        form_window.geometry(window_size)  # Set window size dynamically based on the table
         form_window.resizable(False, False)  # Disable resizing for the form window
-        form_window.iconbitmap("MDU_logo.ico")  # Set the icon
+
+        # Set the MDU logo icon, adjust the path as needed
+        form_window.iconbitmap("MDU_logo.ico")  
 
         cursor = self.connection.cursor()
         cursor.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}';")
@@ -338,17 +384,21 @@ class CRUDApp(ctk.CTk):
 
         entry_vars = {}
 
-        # Centering elements in form_window
-        form_window.grid_columnconfigure(0, weight=1)
-        form_window.grid_columnconfigure(1, weight=1)
+        # Container frame for the form content
+        form_frame = ctk.CTkFrame(form_window, fg_color="#333333")
+        form_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # Display input fields for all columns
+        form_title = ctk.CTkLabel(form_frame, text=table_name, font=("Arial", 18, "bold"))
+        form_title.grid(row=0, column=0, columnspan=2, pady=20, sticky="n")
+
+        # Centering the labels and entry fields
         for i, col in enumerate(columns):
-            label = ctk.CTkLabel(form_window, text=col)
-            label.grid(row=i, column=0, padx=10, pady=10, sticky="e")
+            label = ctk.CTkLabel(form_frame, text=col, font=("Arial", 14), anchor="center")
+            label.grid(row=i + 1, column=0, padx=10, pady=10, sticky="e")
+
             entry_var = ctk.StringVar()
-            entry = ctk.CTkEntry(form_window, textvariable=entry_var)
-            entry.grid(row=i, column=1, padx=10, pady=10, sticky="ew")
+            entry = ctk.CTkEntry(form_frame, textvariable=entry_var, font=("Arial", 14), width=200)  # Adjusted width
+            entry.grid(row=i + 1, column=1, padx=10, pady=10, sticky="w")
 
             # If updating, prefill with the current value
             if record_values:
@@ -356,55 +406,39 @@ class CRUDApp(ctk.CTk):
 
             entry_vars[col] = entry_var
 
-        # Frame for table schema
-        schema_frame = ctk.CTkFrame(form_window, corner_radius=10, fg_color="#2e2e2e")
-        schema_frame.grid(row=len(columns) + 1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
-        schema_frame.grid_columnconfigure(0, weight=1)
+        # Submit and Cancel Buttons
+        button_frame = ctk.CTkFrame(form_frame, fg_color="#333333", corner_radius=10)
+        button_frame.grid(row=len(columns) + 1, column=0, columnspan=2, pady=20)
 
-        # Fetch and display the table schema at the bottom
-        cursor.execute(f"""
-            SELECT column_name, data_type, is_nullable, column_default
-            FROM information_schema.columns
-            WHERE table_name = '{table_name}';
-        """)
-        schema_info = "\n".join(
-            [f"{col[0]} {col[1]}{' PRIMARY KEY' if col[0] == columns[0] else ''}" for col in cursor.fetchall()]
-        )
+        submit_button = ctk.CTkButton(button_frame, text="Submit", command=lambda: self.submit_form(is_create, entry_vars, table_name, record_values), width=120, hover_color="#28a745", fg_color="#5cb85c")
+        submit_button.grid(row=0, column=0, padx=10, pady=10)
 
-        schema_label = ctk.CTkLabel(schema_frame, text=f"Table Schema:\n{schema_info}", justify="left")
-        schema_label.grid(row=0, column=0, padx=10, pady=10)
+        cancel_button = ctk.CTkButton(button_frame, text="Cancel", command=form_window.destroy, width=120, hover_color="#d9534f", fg_color="#dc3545")
+        cancel_button.grid(row=0, column=1, padx=10, pady=10)
 
-        def submit_form():
-            """Submit the form values to the database."""
-            # Check for empty fields
-            if is_create and any(not entry_vars[col].get().strip() for col in columns):
-                messagebox.showerror("Error", "All fields must be filled!")
-                return
+    def submit_form(self, is_create, entry_vars, table_name, record_values):
+        """Submit the form values to the database."""
+        cursor = self.connection.cursor()
+        columns = list(entry_vars.keys())
+        values = [entry_vars[col].get() for col in columns]
 
-            try:
-                values = [entry_vars[col].get() for col in columns]
-                if is_create:
-                    placeholders = ", ".join(["%s"] * len(columns))
-                    sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders});"
-                    cursor.execute(sql, values)
-                else:
-                    set_clause = ", ".join([f"{col} = %s" for col in columns])
-                    sql = f"UPDATE {table_name} SET {set_clause} WHERE {columns[0]} = %s;"
-                    cursor.execute(sql, values + [record_values[0]])
-                self.connection.commit()
-                messagebox.showinfo("Success", f"Record {'created' if is_create else 'updated'} successfully!")
-                form_window.destroy()
-                self.load_table_data(table_name)
+        try:
+            if is_create:
+                placeholders = ", ".join(["%s"] * len(columns))
+                sql = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders});"
+                cursor.execute(sql, values)
+            else:
+                set_clause = ", ".join([f"{col} = %s" for col in columns])
+                sql = f"UPDATE {table_name} SET {set_clause} WHERE {columns[0]} = %s;"
+                cursor.execute(sql, values + [record_values[0]])
+            self.connection.commit()
+            messagebox.showinfo("Success", f"Record {'created' if is_create else 'updated'} successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to submit record: {e}")
+        finally:
+            if 'cursor' in locals() and cursor:
+                cursor.close()
 
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to {'create' if is_create else 'update'} record: {e}")
-
-            finally:
-                if 'cursor' in locals() and cursor:
-                    cursor.close()
-
-        submit_button = ctk.CTkButton(form_window, text="Submit", command=submit_form)
-        submit_button.grid(row=len(columns), column=0, columnspan=2, padx=10, pady=10)
 
 if __name__ == '__main__':
     app = CRUDApp()
