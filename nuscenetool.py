@@ -1,6 +1,6 @@
 import csv
 import customtkinter as ctk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, scrolledtext, filedialog
 import psycopg2
 import os
 import subprocess
@@ -68,6 +68,7 @@ class CRUDApp(ctk.CTk):
         self.crud_frame.grid_columnconfigure(1, weight=1)
         self.crud_frame.grid_columnconfigure(2, weight=1)
         self.crud_frame.grid_columnconfigure(3, weight=1)
+        self.crud_frame.grid_columnconfigure(4, weight=1)
 
         self.create_button = ctk.CTkButton(self.crud_frame, text="Insert", command=self.create_record, width=100,
                                            hover_color="#28a745", fg_color="#5cb85c")
@@ -85,6 +86,10 @@ class CRUDApp(ctk.CTk):
                                              width=100, hover_color="#17a2b8", fg_color="#0275d8", state="disabled")
         self.download_button.grid(row=0, column=3, padx=10, pady=10)
 
+        self.sql_button = ctk.CTkButton(self.crud_frame, text="🔍 SQL", command=self.open_sql_query_window,
+                                        width=100, hover_color="#17a2b8", fg_color="#0275d8", state="disabled")
+        self.sql_button.grid(row=0, column=4, padx=10, pady=10)
+
         self.grid_rowconfigure(2, weight=0)
 
     def toggle_connection(self):
@@ -96,7 +101,7 @@ class CRUDApp(ctk.CTk):
     def show_connection_popup(self):
         self.popup_window = ctk.CTkToplevel(self)
         self.popup_window.title("Database Connection")
-        self.popup_window.geometry("400x350")
+        self.popup_window.geometry("360x350")
         self.popup_window.resizable(False, False)
         self.popup_window.iconbitmap("MDU_logo.ico")
 
@@ -112,14 +117,14 @@ class CRUDApp(ctk.CTk):
             entry_var = ctk.StringVar()
             entry = ctk.CTkEntry(frame, textvariable=entry_var, font=("Arial", 14), width=200)
             entry.grid(row=i, column=1, padx=10, pady=10, sticky="w")
-            
+
             if label == "Password":
                 entry.configure(show="*")
-            
+
             self.entry_vars[label.lower()] = entry_var
 
         button_frame = ctk.CTkFrame(frame)
-        button_frame.grid(row=len(labels), column=0, columnspan=2, pady=20)
+        button_frame.grid(row=len(labels), column=0, columnspan=30, pady=20)
 
         submit_button = ctk.CTkButton(button_frame, text="Submit", command=self.connect_to_db_from_popup)
         submit_button.grid(row=0, column=0, padx=10)
@@ -153,6 +158,7 @@ class CRUDApp(ctk.CTk):
 
             self.table_menu.configure(values=self.tables)
             self.download_button.configure(state="normal")
+            self.sql_button.configure(state="normal")
             self.connection_button.configure(text="Remove Connection", fg_color="#dc3545", hover_color="#ff4d4d")
             messagebox.showinfo("Success", "Connected to the database successfully!")
             self.popup_window.destroy()
@@ -173,6 +179,7 @@ class CRUDApp(ctk.CTk):
                 self.connection = None
                 self.connection_button.configure(text="Connect to DB", fg_color="#17a2b8", hover_color="#4CAF50")
                 self.download_button.configure(state="disabled")
+                self.sql_button.configure(state="disabled")
                 self.tree.delete(*self.tree.get_children())
                 self.table_var.set("Select a table")
                 self.table_menu.configure(values=[])
@@ -181,6 +188,119 @@ class CRUDApp(ctk.CTk):
                 messagebox.showwarning("Warning", "No active connection to disconnect.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to disconnect: {e}")
+
+    def open_sql_query_window(self):
+        if not self.check_connection():
+            return
+
+        query_window = ctk.CTkToplevel(self)
+        query_window.title("SQL Query (Command Line)")
+        query_window.geometry("600x400")
+        query_window.resizable(False, False)
+        query_window.iconbitmap("MDU_logo.ico")
+
+        frame = ctk.CTkFrame(query_window)
+        frame.pack(pady=20, padx=20, fill="both", expand=True)
+
+        # Configure the grid for centering and expansion
+        frame.grid_columnconfigure(0, weight=1)  # Make the first column expand
+        frame.grid_columnconfigure(1, weight=1)  # In case you need more than one column
+
+        label = ctk.CTkLabel(frame, text="Enter SQL Query", font=("Arial", 14))
+        label.grid(row=0, column=0, columnspan=2, pady=10, sticky="ew")  # Span across 2 columns and center
+
+        self.query_entry = ctk.CTkEntry(frame, width=500, font=("Arial", 12), justify="center")
+        self.query_entry.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="ew")  # Full width entry
+        self.query_entry.bind("<Return>", lambda event: self.execute_sql_query(query_window))
+
+        output_label = ctk.CTkLabel(frame, text="Output", font=("Arial", 14))
+        output_label.grid(row=2, column=0, columnspan=2, pady=10, sticky="ew")
+
+        self.output_text = scrolledtext.ScrolledText(frame, wrap="word", height=10, font=("Consolas", 12), state='disabled')
+        self.output_text.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+
+        button_frame = ctk.CTkFrame(frame)
+        button_frame.grid(row=4, column=0, columnspan=2, pady=10)
+
+        # Execute button
+        run_button = ctk.CTkButton(button_frame, text="Run Query", command=self.execute_sql_query)
+        run_button.grid(row=0, column=0, padx=10)
+
+        # Clear button
+        clear_button = ctk.CTkButton(button_frame, text="Clear", command=self.clear_sql_query)
+        clear_button.grid(row=0, column=1, padx=10)
+
+        # Save to CSV button
+        save_button = ctk.CTkButton(button_frame, text="Save to CSV", command=self.save_to_csv)
+        save_button.grid(row=0, column=2, padx=10)
+
+    def execute_sql_query(self):
+        query = self.query_entry.get().strip()
+        if not query:
+            messagebox.showwarning("No Query", "Please enter an SQL query.")
+            return
+
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(query)
+
+            if cursor.description:
+                columns = [desc[0] for desc in cursor.description]
+                rows = cursor.fetchall()
+
+                # Store the query result for CSV export
+                self.query_result = {"columns": columns, "rows": rows}
+
+                # Calculate column widths dynamically
+                col_widths = [max(len(str(col)), max(len(str(row[idx])) for row in rows)) for idx, col in enumerate(columns)]
+                header = " | ".join(f"{col.center(col_widths[idx])}" for idx, col in enumerate(columns))
+                separator = "-" * len(header)
+
+                result = f"{header}\n{separator}\n"
+                for row in rows:
+                    result += " | ".join(f"{str(item).center(col_widths[idx])}" for idx, item in enumerate(row)) + "\n"
+
+                self.display_output(result)
+            else:
+                self.connection.commit()
+                self.display_output("Query executed successfully.")
+
+        except Exception as e:
+            self.display_output(f"Error: {e}")
+        finally:
+            if 'cursor' in locals() and cursor:
+                cursor.close()
+
+    def display_output(self, text):
+        self.output_text.config(state="normal")
+        self.output_text.delete(1.0, "end")
+        self.output_text.insert("end", text)
+        self.output_text.config(state="disabled")
+
+    def clear_sql_query(self):
+        self.query_entry.delete(0, 'end')
+        self.output_text.config(state="normal")
+        self.output_text.delete(1.0, 'end')
+        self.output_text.config(state="disabled")
+        self.query_result = None
+
+    def save_to_csv(self):
+        if not hasattr(self, "query_result") or not self.query_result:
+            messagebox.showwarning("No Data", "No query results available to save.")
+            return
+
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, mode="w", newline="") as file:
+                writer = csv.writer(file)
+                writer.writerow(self.query_result["columns"])  # Write headers
+                writer.writerows(self.query_result["rows"])    # Write data rows
+            messagebox.showinfo("Success", f"Data successfully saved to {file_path}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save data: {e}")
 
     def check_connection(self):
         if not self.connection:
@@ -282,20 +402,20 @@ class CRUDApp(ctk.CTk):
     def show_download_popup(self):
         self.popup_window = ctk.CTkToplevel(self)
         self.popup_window.title("Download Format")
-        self.popup_window.geometry("300x150")
+        self.popup_window.geometry("360x150")
         self.popup_window.resizable(False, False)
         self.popup_window.iconbitmap("MDU_logo.ico")
 
         frame = ctk.CTkFrame(self.popup_window)
         frame.pack(pady=20, padx=20, fill="both", expand=True)
 
-        label = ctk.CTkLabel(frame, text="Choose the format to download:", font=("Arial", 14))
+        label = ctk.CTkLabel(frame, text="Choose the format to download", font=("Arial", 14))
         label.grid(row=0, column=0, columnspan=2, pady=10)
 
-        sql_button = ctk.CTkButton(frame, text="Download as SQL", command=lambda: self.download_database("sql"))
+        sql_button = ctk.CTkButton(frame, text="SQL (DB)", command=lambda: self.download_database("sql"))
         sql_button.grid(row=1, column=0, padx=10, pady=10)
 
-        csv_button = ctk.CTkButton(frame, text="Download as CSV", command=lambda: self.download_database("csv"))
+        csv_button = ctk.CTkButton(frame, text="CSV (Table)", command=lambda: self.download_database("csv"))
         csv_button.grid(row=1, column=1, padx=10, pady=10)
 
     def download_database(self, file_type):
@@ -507,7 +627,7 @@ class CRUDApp(ctk.CTk):
         finally:
             if 'cursor' in locals() and cursor:
                 cursor.close()
-
+    
 
 if __name__ == '__main__':
     app = CRUDApp()
