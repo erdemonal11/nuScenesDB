@@ -4,11 +4,19 @@ This project contains a Python script that connects to a PostgreSQL database and
 
 ## Project Structure
 
+- **`nuscenetool.py`**: The main Python file containing the customtkinter GUI tool for interacting with the PostgreSQL database.
 - **`dbconnect.py`**: Python script that connects to a PostgreSQL database and runs a `.sql` file.
 - **`Dockerfile.nuscene`**: Dockerfile for building the container image.
 - **`nuScene.sql`**: SQL script containing the schema or queries to be executed.
 - **`.env`**: Environment file storing database connection parameters.
 - **`Makefile`**: File containing commands to build, run, stop, clean, and rebuild the Docker container.
+
+## Features
+- Connect to PostgreSQL: Establishes a connection to a PostgreSQL database using credentials from an .env file or manual input.
+- CRUD Operations: Insert, update, and delete records from the database using a user-friendly GUI.
+- SQL Query Execution: Execute custom SQL queries directly from the GUI.
+- Database Export: Export the entire database or selected tables in CSV or SQL format.
+- Sorting and Search: Sort table columns and search through records with ease.
 
 ## Prerequisites
 
@@ -70,6 +78,24 @@ make clean
 ```bash
 make rebuild
 ```
+
+## GUI Usage
+Once the container is running, you can use the GUI to interact with the database:
+
+- Connect to Database:
+Use the Connect to DB button and provide the necessary connection details or use the .env file.
+
+- View Table Data:
+Select a table from the dropdown to load its data in the table view.
+
+- Insert, Update, and Delete Records:
+Use the Insert, Update, or Delete buttons to manage records.
+
+- Run SQL Queries:
+Open the SQL query window by clicking the SQL button, enter your query, and view the results.
+
+- Export Data:
+Click Download DB to export the database in either CSV or SQL format.
 
 ## Notes
 
