@@ -180,14 +180,20 @@ class CRUDApp(ctk.CTk):
                 self.connection_button.configure(text="Connect to DB", fg_color="#17a2b8", hover_color="#4CAF50")
                 self.download_button.configure(state="disabled")
                 self.sql_button.configure(state="disabled")
-                self.tree.delete(*self.tree.get_children())
+                
+                # Clear the Treeview content and columns when disconnected
+                self.tree.delete(*self.tree.get_children())  # Clear all rows
+                self.tree["columns"] = []  # Clear all columns
+                self.tree.configure(columns=[])  # Remove column headers
                 self.table_var.set("Select a table")
                 self.table_menu.configure(values=[])
+                
                 messagebox.showinfo("Disconnected", "Database connection closed successfully.")
             else:
                 messagebox.showwarning("Warning", "No active connection to disconnect.")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to disconnect: {e}")
+
 
     def open_sql_query_window(self):
         if not self.check_connection():
