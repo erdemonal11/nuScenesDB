@@ -203,15 +203,17 @@ class CRUDApp(ctk.CTk):
         frame.pack(pady=20, padx=20, fill="both", expand=True)
 
         # Configure the grid for centering and expansion
-        frame.grid_columnconfigure(0, weight=1)  # Make the first column expand
-        frame.grid_columnconfigure(1, weight=1)  # In case you need more than one column
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_columnconfigure(1, weight=1)
 
         label = ctk.CTkLabel(frame, text="Enter SQL Query", font=("Arial", 14))
-        label.grid(row=0, column=0, columnspan=2, pady=10, sticky="ew")  # Span across 2 columns and center
+        label.grid(row=0, column=0, columnspan=2, pady=10, sticky="ew")
 
         self.query_entry = ctk.CTkEntry(frame, width=500, font=("Arial", 12), justify="center")
-        self.query_entry.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="ew")  # Full width entry
-        self.query_entry.bind("<Return>", lambda event: self.execute_sql_query(query_window))
+        self.query_entry.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        
+        # Fix for Enter key handling
+        self.query_entry.bind("<Return>", lambda event: self.execute_sql_query())
 
         output_label = ctk.CTkLabel(frame, text="Output", font=("Arial", 14))
         output_label.grid(row=2, column=0, columnspan=2, pady=10, sticky="ew")
@@ -222,16 +224,17 @@ class CRUDApp(ctk.CTk):
         button_frame = ctk.CTkFrame(frame)
         button_frame.grid(row=4, column=0, columnspan=2, pady=10)
 
-        # Execute button
-        run_button = ctk.CTkButton(button_frame, text="Run Query", command=self.execute_sql_query)
+        # Buttons with custom colors
+        run_button = ctk.CTkButton(button_frame, text="Run Query", command=self.execute_sql_query, 
+                                hover_color="#28a745", fg_color="#5cb85c")
         run_button.grid(row=0, column=0, padx=10)
 
-        # Clear button
-        clear_button = ctk.CTkButton(button_frame, text="Clear", command=self.clear_sql_query)
+        clear_button = ctk.CTkButton(button_frame, text="Clear", command=self.clear_sql_query, 
+                                    hover_color="#ffc107", fg_color="#f0ad4e")
         clear_button.grid(row=0, column=1, padx=10)
 
-        # Save to CSV button
-        save_button = ctk.CTkButton(button_frame, text="Save to CSV", command=self.save_to_csv)
+        save_button = ctk.CTkButton(button_frame, text="Save to CSV", command=self.save_to_csv, 
+                                    hover_color="#17a2b8", fg_color="#0275d8")
         save_button.grid(row=0, column=2, padx=10)
 
     def execute_sql_query(self):
@@ -266,6 +269,7 @@ class CRUDApp(ctk.CTk):
                 self.display_output("Query executed successfully.")
 
         except Exception as e:
+            self.connection.rollback()  # Rollback the transaction if any error occurs
             self.display_output(f"Error: {e}")
         finally:
             if 'cursor' in locals() and cursor:
@@ -435,36 +439,39 @@ class CRUDApp(ctk.CTk):
         user = self.entry_vars['user'].get()
         password = self.entry_vars['password'].get()
 
-        desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+        # Ask for the file path and filename for the dump
+        file_path = filedialog.asksaveasfilename(defaultextension=f".{file_type}", 
+                                                filetypes=[(f"{file_type.upper()} files", f"*.{file_type}")],
+                                                title=f"Save {file_type.upper()} file")
+
+        if not file_path:
+            return  # If no file path is selected, abort the download process.
 
         if file_type == "sql":
             # For SQL, we dump the entire database, not just the selected table
             pg_dump_path = "C:/PostgreSQL/bin/pg_dump.exe"
-            dump_file_path = os.path.join(desktop_path, "nuSceneDB.sql")
-            dump_command = f'"{pg_dump_path}" --dbname=postgresql://{user}:{password}@{host}:{port}/{database} -F c -b -v -f "{dump_file_path}"'
+            dump_command = f'"{pg_dump_path}" --dbname=postgresql://{user}:{password}@{host}:{port}/{database} -F c -b -v -f "{file_path}"'
 
             try:
                 subprocess.run(dump_command, shell=True, check=True)
-                messagebox.showinfo("Success", f"Database successfully downloaded as '{os.path.basename(dump_file_path)}' on your Desktop!")
+                messagebox.showinfo("Success", f"Database successfully downloaded as '{os.path.basename(file_path)}'.")
             except subprocess.CalledProcessError as e:
                 messagebox.showerror("Error", f"Failed to download the database: {e}")
 
         elif file_type == "csv":
             # For CSV, we can only dump a single table (selected in the dropdown)
-            dump_file_path = os.path.join(desktop_path, f"{table_name}_nuSceneDB.csv")
-
             try:
                 cursor = self.connection.cursor()
                 cursor.execute(f"SELECT * FROM {table_name};")
                 rows = cursor.fetchall()
                 columns = [desc[0] for desc in cursor.description]
 
-                with open(dump_file_path, 'w', newline='') as csvfile:
+                with open(file_path, 'w', newline='') as csvfile:
                     writer = csv.writer(csvfile)
                     writer.writerow(columns)  # Write headers
                     writer.writerows(rows)    # Write data rows
 
-                messagebox.showinfo("Success", f"CSV successfully downloaded as '{os.path.basename(dump_file_path)}' on your Desktop!")
+                messagebox.showinfo("Success", f"CSV successfully downloaded as '{os.path.basename(file_path)}'.")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to download CSV: {e}")
             finally:
