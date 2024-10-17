@@ -100,7 +100,7 @@ Use the **Update** feature to modify existing records directly from the table vi
 
 The latest version of the tool is available as an executable for easy installation:
 
-- [Download nuScenes DB Tool - v1.0.0](https://github.com/erdemonal11/nuScenesDB)
+- [Download nuScenes DB Tool - v1.0.0](https://github.com/erdemonal11/nuScenesDB/releases/tag/exe-release)
 
 ## License
 
