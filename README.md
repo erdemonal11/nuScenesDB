@@ -1,135 +1,108 @@
-# nuScenesDB 
+# nuScenes DB Tool - v1.0.0
 
-This project contains a Python script that connects to a PostgreSQL database and executes a SQL script. The application is containerized using Docker, allowing for easy setup and execution using `Makefile` commands.
-
-## Project Structure
-
-- **`nuscenetool.py`**: The main Python file containing the customtkinter GUI tool for interacting with the PostgreSQL database.
-- **`dbconnect.py`**: Python script that connects to a PostgreSQL database and runs a `.sql` file.
-- **`Dockerfile.nuscene`**: Dockerfile for building the container image.
-- **`nuScene.sql`**: SQL script containing the schema or queries to be executed.
-- **`.env`**: Environment file storing database connection parameters.
-- **`Makefile`**: File containing commands to build, run, stop, clean, and rebuild the Docker container.
+**nuScenes DB Tool** is a Python-based graphical tool for PostgreSQL database management. This tool features an intuitive GUI for performing CRUD operations (Create, Read, Update, Delete), SQL query execution, and data export in SQL or CSV formats. Additionally, you can now import data from CSV files and update records seamlessly. The application is also packaged as an executable for easy distribution.
 
 ## Features
-- Connect to PostgreSQL: Establishes a connection to a PostgreSQL database using credentials from an .env file or manual input.
-- CRUD Operations: Insert, update, and delete records from the database using a user-friendly GUI.
-- SQL Query Execution: Execute custom SQL queries directly from the GUI.
-- Database Export: Export the entire database or selected tables in CSV or SQL format.
-- Sorting and Search: Sort table columns and search through records with ease.
 
-## Prerequisites
+- **Connect to PostgreSQL**: Easily connect to a PostgreSQL database by entering the necessary credentials.
+- **CRUD Operations**: Perform create, read, update, and delete operations on database records.
+- **SQL Query Execution**: Run custom SQL queries directly within the app and view results.
+- **Data Export**: Export table data or the entire database in SQL or CSV format.
+- **CSV Import**: Import data into tables from CSV files.
+- **GUI Enhancements**: Use a modern interface with sorting and easy navigation through tables.
+- **Executable**: Available as a packaged executable under releases for easy installation.
 
-- Docker installed and running on your machine.
-- PostgreSQL server running and configured to accept external connections.
-- Python 3.10 (only if you plan to run the script outside of Docker).
+## Table of Contents
 
-## Setup
+- [Features](#features)
+- [Installation](#installation)
+- [How to Use](#how-to-use)
+- [Screenshots](#screenshots)
+- [Releases](#releases)
+- [License](#license)
 
-### 1. Clone the Repository
+## Installation
 
-```bash
-git clone <your-repository-url>
-cd nuScenesDB
-```
+### Option 1: Running the Executable (Recommended)
 
-2. Create the **`.env`** File
+1. Download the latest release: [nuScenes DB Tool - v1.0.0](https://github.com/erdemonal11/nuScenesDB/releases/tag/exe-release).
+2. Extract the files and run the `nuScenes DB Tool - v1.0.0.exe`.
 
-```bash
-DB_HOST=192.168.0.3
-DB_PORT=5432
-DB_NAME=nuScene
-DB_USER=your_username
-DB_PASSWORD=your_password
-```
+### Option 2: Running from Source
 
-## Build and Run with Makefile
+1. Clone the repository:
 
-The `Makefile` provides several commands to manage the Docker container.
+   ```bash
+   git clone https://github.com/erdemonal11/nuScenesDB.git
+   cd nuscenes-db-tool
+   ```
 
-### 1. Build the Docker Image
 
-```bash
-make build
-```
+2. Install dependencies:
+   ```bash
+    pip install -r requirements.txt
+    ```
+3. Run the Python script:
+   ```bash
+    python nuscenetool.py
+    ```
 
-This command will start the container and execute the **`dbconnect.py`** script.
+## How to Use
 
-### 2. Run the Container
+### Connect to Database:
+1. Open the application and click **Connect to DB**.
+2. Enter the PostgreSQL database credentials (Host, Port, Database, User, and Password).
+3. Once connected, tables will appear in the dropdown for selection.
 
-```bash
-make run
-```
+### CRUD Operations:
+- **Insert**: Manually insert records or import from a CSV file.
+- **Update**: Select a record from the table and click **Update** to modify it.
+- **Delete**: Select a record and click **Delete** to remove it.
 
-### 3. Stop the Container
+### SQL Query Execution:
+- Use the **SQL** tool to write and execute custom queries.
+- View the query output and export the results in CSV format.
 
-```bash
-make stop
-```
+### Export Data:
+- Click **Export DB** to export either a specific table or the entire database in CSV or SQL format.
 
-### 4. Remove the Docker Image
-
-```bash
-make clean
-```
-
-### 5. Rebuild and Run the Container
-
-```bash
-make rebuild
-```
-
-## GUI Usage
-Once the container is running, you can use the GUI to interact with the database:
-
-- Connect to Database:
-Use the Connect to DB button and provide the necessary connection details or use the .env file.
-
-- View Table Data:
-Select a table from the dropdown to load its data in the table view.
-
-- Insert, Update, and Delete Records:
-Use the Insert, Update, or Delete buttons to manage records.
-
-- Run SQL Queries:
-Open the SQL query window by clicking the SQL button, enter your query, and view the results.
-
-- Export Data:
-Click Download DB to export the database in either CSV or SQL format.
+### CSV Import:
+- Use the **CSV import** feature to load data into the selected table from a CSV file.
 
 ## Screenshots
 
-To better understand the functionality and user interface, here are some example screenshots of the application:
-
 ### 1. Connection and UI
-
-The initial user interface of the **nuScenes DB Tool** allows users to click the **Connect to DB** button and enter the required database credentials (Host, Port, Database, User, and Password). Once connected, available tables populate in the dropdown list.
+The interface allows you to easily connect to a PostgreSQL database by providing the necessary credentials. After connecting, available tables are listed in the dropdown.
 
 ![Connection and UI](./images/connection.png)
 
 ### 2. Download Format
-
-After connecting to the database and selecting a table, users can choose to download the table in **SQL** or **CSV** format. The table fields such as `sensor_token`, `channel`, and `modality` are displayed in the main window.
+After selecting a table, you can export the data in SQL or CSV format.
 
 ![Download Format](./images/download.png)
 
 ### 3. Table Data
-
-Once connected, the table data is displayed with columns like `sensor_token`, `channel`, and `modality`, allowing users to interact with the database records.
+View, sort, and interact with the table data. You can perform CRUD operations on the records.
 
 ![Table Data](./images/ui.png)
 
 ### 4. SQL Query Tool
-
-The SQL Query window enables users to enter and execute custom SQL queries. Results are displayed in a console-like output with options to **Run Query**, **Clear**, or **Save to CSV**.
+Execute custom SQL queries and view the output directly in the tool.
 
 ![SQL Query Tool](./images/querytool.png)
 
+### 5. Record Update
+Use the **Update** feature to modify existing records directly from the table view.
 
+![Record Update](./images/update.png)
 
-## Notes
+## Releases
 
-- Ensure that your PostgreSQL server is configured to allow connections from the Docker container by modifying `postgresql.conf` and `pg_hba.conf`.
-- The `Makefile` uses environment variables stored in the `.env` file for the database connection.
-- If you encounter any issues with container name conflicts, use the `make stop` command to stop and remove existing containers before rerunning.
+The latest version of the tool is available as an executable for easy installation:
+
+- [Download nuScenes DB Tool - v1.0.0](https://github.com/erdemonal11/nuScenesDB/releases/tag/exe-release)
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for more details.
 
