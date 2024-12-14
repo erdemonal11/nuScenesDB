@@ -1,5 +1,11 @@
+numpy<2.0.0
 psycopg2-binary
 pandas
 sqlalchemy
 python-dotenv
-
+fastapi
+uvicorn
+pydantic
+nuscenes-devkit
+matplotlib
+opencv-python

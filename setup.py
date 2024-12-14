@@ -1,9 +1,14 @@
 import sys
+import os
 from cx_Freeze import setup, Executable
+
+dll_path = "C:/Users/mrifk/AppData/Local/Programs/Python/Python310/python310.dll"
 
 build_exe_options = {
     "packages": ["os", "psycopg2", "customtkinter", "tkinter", "subprocess", "csv", "tabulate"],
-    "include_files": []  
+    "include_files": [
+        dll_path  
+    ]
 }
 
 base = None
@@ -12,7 +17,7 @@ if sys.platform == "win32":
 
 executables = [
     Executable(
-        script="nuscenetool.py",
+        script="nuscenetool.py",  
         base=base,
     )
 ]

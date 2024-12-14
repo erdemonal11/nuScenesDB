@@ -5,28 +5,23 @@ ARG DB_PASSWORD
 ARG DB_HOST
 ARG DB_PORT
 ARG DB_NAME
+ARG API_PORT
+ARG API_HOST
 
 ENV DB_USER=${DB_USER}
 ENV DB_PASSWORD=${DB_PASSWORD}
 ENV DB_HOST=${DB_HOST}
 ENV DB_PORT=${DB_PORT}
 ENV DB_NAME=${DB_NAME}
+ENV API_PORT=${API_PORT}
+ENV API_HOST=${API_HOST}
 
 WORKDIR /app
 
 COPY . /app
 
-RUN apt-get update && apt-get install -y \
-    gcc \
-    python3-dev \
-    git \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "dbconnect.py"]
+EXPOSE ${API_PORT}
+
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
