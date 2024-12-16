@@ -104,20 +104,25 @@ CREATE TABLE sample_data (
     sample_token VARCHAR(255),
     ego_pose_token VARCHAR(255),
     calibrated_sensor_token VARCHAR(255),
-    filename VARCHAR(255),
-    fileformat VARCHAR(50),
-    width INT,
-    height INT,
     timestamp BIGINT,
+    fileformat VARCHAR(255),
     is_key_frame BOOLEAN,
-    next VARCHAR(255),
+    height INTEGER,
+    width INTEGER,
+    filename TEXT,
     prev VARCHAR(255),
+    next VARCHAR(255),
     FOREIGN KEY (sample_token) REFERENCES sample(token),
     FOREIGN KEY (ego_pose_token) REFERENCES ego_pose(token),
-    FOREIGN KEY (calibrated_sensor_token) REFERENCES calibrated_sensor(token),
-    FOREIGN KEY (next) REFERENCES sample_data(token),
-    FOREIGN KEY (prev) REFERENCES sample_data(token)
+    FOREIGN KEY (calibrated_sensor_token) REFERENCES calibrated_sensor(token)
 );
+
+-- Add the next foreign key constraint after all data is inserted
+ALTER TABLE sample_data 
+    ADD CONSTRAINT sample_data_next_fkey 
+    FOREIGN KEY (next) 
+    REFERENCES sample_data(token) 
+    DEFERRABLE INITIALLY DEFERRED;
 
 CREATE TABLE sample_annotation (
     token VARCHAR(255) PRIMARY KEY,

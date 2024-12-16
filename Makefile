@@ -1,61 +1,112 @@
-IMAGE_NAME = nuscene
-CONTAINER_NAME = nuscene-db
-DOCKERFILE = Dockerfile.nuscene
-
-API_IMAGE = nuscene-api
-API_CONTAINER = nuscene-api-container
-API_DOCKERFILE = Dockerfile.api
-
+# Include environment variables from .env file
 include .env
-export $(shell sed 's/=.*//' .env)
+export
 
-.PHONY: all
-all: build run api-build api-run
+# Create Docker network
+.PHONY: network
+network:
+	docker network create $(DOCKER_NETWORK) || true
 
-.PHONY: build
-build:
-	docker build -f $(DOCKERFILE) -t $(IMAGE_NAME) .
+# Build DB image
+.PHONY: build-db
+build-db:
+	docker build -t nuscene -f Dockerfile .
 
-.PHONY: run
-run: stop
-	docker run --network="host" \
-		-e DB_USER=$(DB_USER) \
-		-e DB_PASSWORD=$(DB_PASSWORD) \
+# Build API image
+.PHONY: build-api
+build-api:
+	docker build -t nuscene-api -f Dockerfile.api .
+
+# Run database container
+.PHONY: run-db
+run-db: network
+	docker run --network=$(DOCKER_NETWORK) \
+		--env-file .env \
 		-e DB_HOST=host.docker.internal \
-		-e DB_PORT=$(DB_PORT) \
-		-e DB_NAME=$(DB_NAME) \
-		-v $(SQL_FILE_PATH):/app/nuScene.sql \
-		--name $(CONTAINER_NAME) \
-		$(IMAGE_NAME)
+		-e SQL_FILE_PATH=/app/nuScene.sql \
+		-v "$(PWD)/nuScene.sql:/app/nuScene.sql" \
+		-v "$(NUSCENES_DATAROOT):$(NUSCENES_DATAROOT)" \
+		--add-host=host.docker.internal:host-gateway \
+		--name nuscene-db \
+		nuscene
 
-.PHONY: stop
-stop:
-	docker stop $(CONTAINER_NAME) || true
-	docker rm $(CONTAINER_NAME) || true
+# Run API container
+.PHONY: run-api
+run-api: network
+	docker run -d --network=$(DOCKER_NETWORK) \
+		--env-file .env \
+		-e DB_HOST=host.docker.internal \
+		-e API_PORT=8000 \
+		--add-host=host.docker.internal:host-gateway \
+		-p 127.0.0.1:8000:8000 \
+		--name nuscene-api \
+		nuscene-api
 
+# Stop and remove containers
 .PHONY: clean
-clean: stop
-	docker rmi $(IMAGE_NAME) || true
+clean:
+	docker stop nuscene-db nuscene-api || true
+	docker rm nuscene-db nuscene-api || true
 
-.PHONY: rebuild
-rebuild: clean build run
+# Build and run everything
+.PHONY: all
+all: build-db build-api run-db run-api
 
-.PHONY: api-build
-api-build:
-	docker build -f $(API_DOCKERFILE) -t $(API_IMAGE) .
+# Stop everything and remove containers
+.PHONY: down
+down: clean
+	docker network rm $(DOCKER_NETWORK) || true
 
-.PHONY: api-run
-api-run: api-stop
-	docker run --network="host" -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) -e DB_NAME=$(DB_NAME) -e API_HOST=$(API_HOST) -e API_PORT=$(API_PORT) --name $(API_CONTAINER) $(API_IMAGE)
+# Check API status
+.PHONY: check-api
+check-api:
+	@echo "Checking API container status..."
+	@docker ps | grep nuscene-api || echo "API container is not running"
+	@echo "\nAPI Logs:"
+	@docker logs nuscene-api 2>&1 || echo "Cannot get API logs - container might not be running"
 
-.PHONY: api-stop
-api-stop:
-	docker stop $(API_CONTAINER) || true
-	docker rm $(API_CONTAINER) || true
+# Check DB status
+.PHONY: check-db
+check-db:
+	@echo "Checking DB container status..."
+	@docker ps | grep nuscene-db || echo "DB container is not running"
+	@echo "\nDB Logs:"
+	@docker logs nuscene-db 2>&1 || echo "Cannot get DB logs - container might not be running"
 
-.PHONY: api-clean
-api-clean: api-stop
-	docker rmi $(API_IMAGE) || true
+# Check all services
+.PHONY: status
+status:
+	@echo "=== Service Status ==="
+	@echo "\nDatabase:"
+	@make -s check-db
+	@echo "\nAPI:"
+	@make -s check-api
 
-.PHONY: api-rebuild
-api-rebuild: api-clean api-build api-run
+# Build and run everything from scratch
+.PHONY: start-fresh
+start-fresh:
+	@echo "Cleaning up old containers..."
+	@make down
+	@echo "\nBuilding images..."
+	@make build-db
+	@make build-api
+	@echo "\nStarting services..."
+	@make run-db
+	@make run-api
+	@echo "\nChecking status..."
+	@make status
+
+# Help command
+.PHONY: help
+help:
+	@echo "Available commands:"
+	@echo "  make all          - Build and run everything"
+	@echo "  make start-fresh  - Clean, rebuild, and start everything"
+	@echo "  make down        - Stop and remove all containers"
+	@echo "  make build-db    - Build database image"
+	@echo "  make build-api   - Build API image"
+	@echo "  make run-db      - Run database container"
+	@echo "  make run-api     - Run API container"
+	@echo "  make status      - Check status of all services"
+	@echo "  make check-db    - Check database status and logs"
+	@echo "  make check-api   - Check API status and logs"

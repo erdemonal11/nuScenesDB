@@ -1,0 +1,17 @@
+   version: '3.8'
+   services:
+     nuscene-db:
+       image: nuscene
+       container_name: nuscene-db
+       network_mode: host
+       environment:
+         DB_HOST: host.docker.internal
+         DB_USER: erdem
+         DB_PASSWORD: erdem
+         DB_PORT: 5432
+         DB_NAME: nuScene
+       volumes:
+         - /mnt/c/Users/mrifk/Desktop/nuScene/nuScenesDB/nuScene.sql:/app/nuScene.sql
+         - /mnt/c/Users/mrifk/Desktop/v1.0-mini:/mnt/c/Users/mrifk/Desktop/v1.0-mini
+       extra_hosts:
+         - "host.docker.internal:host-gateway"

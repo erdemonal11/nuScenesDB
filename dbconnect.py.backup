@@ -12,19 +12,10 @@ database = os.getenv('DB_NAME')
 user = os.getenv('DB_USER')
 password = os.getenv('DB_PASSWORD')
 
-sql_file_path = os.getenv('SQL_FILE_PATH', '/app/nuScene.sql')
+sql_file_path = r'C:\Users\mrifk\Desktop\nuScene\nuScenesDB\nuScene.sql'
 
 connection = None
 cursor = None
-
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.getenv('DB_HOST'),
-        database=os.getenv('DB_NAME'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        port=os.getenv('DB_PORT')
-    )
 
 try:
     connection = psycopg2.connect(
@@ -41,10 +32,7 @@ try:
     cursor.execute(sql_commands)
     connection.commit()
 
-    dataroot = os.getenv('NUSCENES_DATAROOT', '/mnt/c/Users/mrifk/Desktop/v1.0-mini')
-
-    # Initialize NuScenes with the correct path
-    nusc = NuScenes(version='v1.0-mini', dataroot=dataroot, verbose=True)
+    nusc = NuScenes(version='v1.0-mini', dataroot=r'C:\Users\mrifk\Desktop\v1.0-mini', verbose=True)
 
     print(f"Number of visibility records: {len(nusc.visibility)}")
     insert_visibility_query = """
@@ -247,22 +235,13 @@ try:
     connection.commit()
     print("Calibrated sensor records inserted successfully.")
 
-    # Disable foreign key constraint temporarily
-    cursor.execute("ALTER TABLE sample_data DROP CONSTRAINT IF EXISTS sample_data_next_fkey;")
-    connection.commit()
-
     print(f"Number of sample_data records: {len(nusc.sample_data)}")
     insert_sample_data_query = """
-    INSERT INTO sample_data (
-        token, sample_token, ego_pose_token, calibrated_sensor_token,
-        timestamp, fileformat, is_key_frame, height, width, filename,
-        prev, next
-    ) VALUES (
-        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-    )
+    INSERT INTO sample_data (token, sample_token, ego_pose_token, calibrated_sensor_token, 
+                           filename, fileformat, width, height, timestamp, is_key_frame)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (token) DO NOTHING
     """
-    
-    print(f"Number of sample_data records to process: {len(nusc.sample_data)}")
     for sample_data in nusc.sample_data:
         try:
             cursor.execute(insert_sample_data_query, (
@@ -270,36 +249,18 @@ try:
                 sample_data['sample_token'],
                 sample_data['ego_pose_token'],
                 sample_data['calibrated_sensor_token'],
-                sample_data['timestamp'],
-                sample_data['fileformat'],
-                sample_data['is_key_frame'],
-                sample_data['height'],
-                sample_data['width'], 
                 sample_data['filename'],
-                sample_data['prev'],
-                sample_data['next'] if sample_data['next'] else None
+                sample_data['fileformat'],
+                sample_data.get('width', None),
+                sample_data.get('height', None),
+                sample_data['timestamp'],
+                sample_data['is_key_frame']
             ))
-            connection.commit()
-            
+            print(f"Inserted sample_data: {sample_data['token']}")
         except Exception as e:
-            print(f"Error processing {sample_data['token']}: {str(e)}")
-            print("Data:", {k: v for k, v in sample_data.items() if k != 'data'})
-            connection.rollback()
-
-    # Re-enable foreign key constraint after all inserts
-    cursor.execute("""
-    ALTER TABLE sample_data 
-    ADD CONSTRAINT sample_data_next_fkey 
-    FOREIGN KEY (next) 
-    REFERENCES sample_data(token)
-    DEFERRABLE INITIALLY DEFERRED;
-    """)
+            print(f"Error inserting sample_data {sample_data['token']}: {e}")
     connection.commit()
-
-    # Verify the insertions
-    cursor.execute("SELECT COUNT(*) FROM sample_data")
-    count = cursor.fetchone()[0]
-    print(f"Total sample_data records in database: {count}")
+    print("Sample data records inserted successfully.")
 
     print(f"Number of map records: {len(nusc.map)}")
     insert_map_query = """
@@ -338,7 +299,6 @@ try:
 
 except Exception as error:
     print(f"An error occurred: {error}")
-    connection.rollback()
 
 finally:
     if cursor is not None:
