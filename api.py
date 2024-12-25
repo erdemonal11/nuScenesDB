@@ -5,6 +5,9 @@ from psycopg2.extras import RealDictCursor
 from typing import List, Optional, Dict
 from pydantic import BaseModel
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="nuScenes API")
 
@@ -429,6 +432,146 @@ def health_check():
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "database": str(e)}
+
+@app.get("/test_endpoints")
+async def test_endpoints(db: psycopg2.extensions.connection = Depends(get_db)):
+    endpoints = {
+        "logs": "/logs",
+        "sensors": "/sensors",
+        "visibility": "/visibility",
+        "attributes": "/attributes",
+        "categories": "/categories",
+        "instances": "/instances",
+        "scenes": "/scenes",
+        "samples": "/samples",
+        "ego_poses": "/ego_poses",
+        "calibrated_sensors": "/calibrated_sensors",
+        "sample_data": "/sample_data",
+        "sample_annotations": "/sample_annotations",
+        "lidarsegs": "/lidarsegs",
+        "maps": "/maps"
+    }
+    
+    results = {}
+    
+    for name, endpoint in endpoints.items():
+        try:
+            cur = db.cursor()
+            # Extract table name from endpoint (remove leading slash and potential plural)
+            table_name = endpoint.strip('/').rstrip('s')
+            if table_name == 'categorie':
+                table_name = 'category'
+            elif table_name == 'visibilitie':
+                table_name = 'visibility'
+            
+            # Test if table exists
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = %s
+                )
+            """, (table_name,))
+            table_exists = cur.fetchone()[0]
+            
+            if not table_exists:
+                results[name] = {
+                    "status": "error",
+                    "message": f"Table {table_name} does not exist",
+                    "endpoint": endpoint
+                }
+                continue
+            
+            # Count records
+            cur.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count = cur.fetchone()[0]
+            
+            # Get sample record
+            cur.execute(f"SELECT * FROM {table_name} LIMIT 1")
+            sample = cur.fetchone()
+            
+            results[name] = {
+                "status": "ok",
+                "record_count": count,
+                "has_data": sample is not None,
+                "endpoint": endpoint,
+                "table_name": table_name,
+                "sample_keys": list(sample.keys()) if sample else None
+            }
+            
+        except Exception as e:
+            results[name] = {
+                "status": "error",
+                "message": str(e),
+                "endpoint": endpoint
+            }
+        finally:
+            cur.close()
+    
+    return {
+        "database": "connected",
+        "endpoint_tests": results,
+        "total_endpoints": len(endpoints),
+        "successful_endpoints": len([r for r in results.values() if r["status"] == "ok"]),
+        "failed_endpoints": len([r for r in results.values() if r["status"] == "error"])
+    }
+
+# Add a more detailed health check
+@app.get("/detailed_health")
+async def detailed_health_check(db: psycopg2.extensions.connection = Depends(get_db)):
+    try:
+        cur = db.cursor()
+        
+        # Check database connection
+        db_status = {"connected": True}
+        
+        # Check if tables exist and have data
+        tables = [
+            'log', 'sensor', 'visibility', 'attribute', 'category',
+            'instance', 'scenes', 'sample', 'ego_pose', 'calibrated_sensor',
+            'sample_data', 'sample_annotation', 'lidarseg', 'map'
+        ]
+        
+        table_status = {}
+        for table in tables:
+            try:
+                cur.execute(f"SELECT COUNT(*) FROM {table}")
+                count = cur.fetchone()[0]
+                table_status[table] = {
+                    "exists": True,
+                    "record_count": count
+                }
+            except Exception as e:
+                table_status[table] = {
+                    "exists": False,
+                    "error": str(e)
+                }
+        
+        # Check disk space
+        cur.execute("SELECT pg_database_size(%s)", (DB_NAME,))
+        db_size = cur.fetchone()[0]
+        
+        return {
+            "status": "healthy",
+            "database": {
+                "connection": db_status,
+                "name": DB_NAME,
+                "size_bytes": db_size,
+                "tables": table_status
+            },
+            "api": {
+                "version": "1.0",
+                "endpoints_available": len(app.routes)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Health check error: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
+    finally:
+        cur.close()
 
 if __name__ == "__main__":
     import uvicorn
