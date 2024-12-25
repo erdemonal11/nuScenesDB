@@ -1,17 +1,20 @@
 # nuScenes DB Tool - v1.0.0
 
-**nuScenes DB Tool** is a Python-based graphical tool for PostgreSQL database management. This tool features an intuitive GUI for performing CRUD operations (Create, Read, Update, Delete), SQL query execution, and data export in SQL or CSV formats. Additionally, you can now import data from CSV files and update records seamlessly. The application is also packaged as an executable for easy distribution.
+**nuScenes API and DB Tool** is a Python-based application designed to manage nuScenes datasets using PostgreSQL and a FastAPI-powered REST API. This tool provides comprehensive database interaction capabilities, supports CRUD operations, custom SQL queries, and enables dataset generation from raw LiDAR samples.
+
+
 
 ## Features
 
-- **Connect to PostgreSQL**: Easily connect to a PostgreSQL database by entering the necessary credentials.
-- **CRUD Operations**: Perform create, read, update, and delete operations on database records.
+- **FastAPI REST API**: Perform CRUD operations and interact with nuScenes data programmatically.
+- **nuScenes Dataset Integration**:  Preprocess and load raw LiDAR data into PostgreSQL.
 - **SQL Query Execution**: Run custom SQL queries directly within the app and view results.
+- **Dockerized Environment**: Simplified deployment with Docker support.
 - **Data Export**: Export table data or the entire database in SQL or CSV format.
 - **CSV Import**: Import data into tables from CSV files.
 - **GUI Enhancements**: Use a modern interface with sorting and easy navigation through tables.
 - **Executable**: Available as a packaged executable under releases for easy installation.
-
+  
 ## Table of Contents
 
 - [Features](#features)
@@ -28,7 +31,7 @@
 1. Download the latest release: [nuScenes DB Tool - v1.0.0](https://github.com/erdemonal11/nuScenesDB/releases/tag/exe-release).
 2. Extract the files and run the `nuScenes DB Tool - v1.0.0.exe`.
 
-### Option 2: Running from Source
+### Option 2: Using Docker
 
 1. Clone the repository:
 
@@ -36,7 +39,31 @@
    git clone https://github.com/erdemonal11/nuScenesDB.git
    cd nuscenes-db-tool
    ```
+2. Create a ```.env``` file for environment variables:
+   ```bash
+   DB_HOST=host.docker.internal
+   DB_PORT=5432
+   DB_NAME=nuscenes_db
+   DB_USER=postgres
+   DB_PASSWORD=yourpassword
+   NUSCENES_DATAROOT=/path/to/nuscenes
+   SQL_FILE_PATH=/path/to/nuScene.sql
+    ```
+3. Build and run the Docker containers:
+   ```bash
+    make start-fresh
+    ```
+4. Access the API documentation at:  ```bash http://127.0.0.1:8000/docs ```
 
+
+### Option 3: Manual Setup
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/erdemonal11/nuScenesDB.git
+   cd nuscenes-db-tool
+   ```
 
 2. Install dependencies:
    ```bash
